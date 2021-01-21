@@ -10,42 +10,40 @@ const recipient = process.env.RECIPIENT_NUMBER
 const twilioClient = twilio(accountSid, authToken)
 
 // Open Weather API:
-// https://openweathermap.org/api
+// https://openweathermap.org/api/one-call-api
 
 let currentTemp
 let highTemp
 let weather
 let weatherDesc
+let sunrise
 let sunset
 
 const getWeather = async () => {
-  await request(`http://api.openweathermap.org/data/2.5/weather?zip=94118&units=imperial&appid=${weatherAppId}`, { json: true }, (err, res, body) => {
+  await request(`http://api.openweathermap.org/data/2.5/onecall?lat=37.7809707&lon=-122.4713741&units=imperial&exclude=minutely,hourly&appid=${weatherAppId}`, { json: true }, (err, res, body) => {
     if (err) { console.log(err); return }
     format(body)
   })
 }
 
-//run program
+// let's go!
 getWeather()
 
-// if response is successful, then
-// write format function to format weather data, then
-// text to me using the Twilio sdk
-
 const format = body => {
-  currentTemp = Math.round(body.main.temp)
-  highTemp = Math.round(body.main.temp_max)
-  weather = body.weather[0].main
-  weatherDesc = body.weather[0].description
-  sunset = new Date(body.sys.sunset * 1000).toString().split(' ')[4]
-  createMessage(currentTemp, highTemp, weather, weatherDesc)
+  weatherDesc = body.current.weather[0].description
+  currentTemp = Math.round(body.current.temp)
+  highTemp = Math.round(body.daily[0].temp.max)
+  sunrise = new Date(body.daily[0].sunrise * 1000).toString().split(' ')[4]
+  sunset = new Date(body.daily[0].sunset * 1000).toString().split(' ')[4]
+  createMessage(weatherDesc, currentTemp, highTemp, sunrise, sunset)
 }
 
-const createMessage = (currentTemp, highTemp, weather, weatherDesc) => {
+const createMessage = (weatherDesc, currentTemp, highTemp, sunrise, sunset) => {
   const message = `\n\n===Today in San Francisco===\n` +
-                  `Weather: ${weatherDesc}\n` +
+                  `Current weather: ${weatherDesc}\n` +
                   `Current temperature: ${currentTemp}\n` +
                   `High temperature: ${highTemp}\n` +
+                  `Sunrise: ${sunrise}\n` +
                   `Sunset: ${sunset}`
 
   sendMessage(message)
@@ -59,7 +57,8 @@ sendMessage = async message => {
       from: twilioNumber
     })
   } catch(e) {
-    process.exit(0)
+    console.log(e)
+    process.exit(1)
   }
-  process.exit(1)
+  process.exit(0)
 }
